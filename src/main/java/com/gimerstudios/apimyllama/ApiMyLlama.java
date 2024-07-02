@@ -1,5 +1,7 @@
 package com.gimerstudios.apimyllama;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -7,23 +9,23 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Map;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ApiMyLlama {
-    private final String ip;
-    private final int port;
-    private final HttpClient client;
-    private final ObjectMapper objectMapper;
 
-    public ApiMyLlama(String ip, int port) {
-        this.ip = ip;
-        this.port = port;
-        this.client = HttpClient.newHttpClient();
+    private final String serverIp;
+    private final int serverPort;
+    private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
+
+    public ApiMyLlama(String serverIp, int serverPort) {
+        this.serverIp = serverIp;
+        this.serverPort = serverPort;
         this.objectMapper = new ObjectMapper();
+        this.httpClient = HttpClient.newHttpClient();
     }
 
-    public Map<String, Object> generate(String apikey, String prompt, String model, boolean stream, Object[] images, boolean raw) throws Exception {
-        String url = String.format("http://%s:%d/generate", ip, port);
+    public String generate(String apikey, String prompt, String model, boolean stream, Map<String, String> images, boolean raw) throws IOException, InterruptedException {
+        String url = String.format("http://%s:%d/generate", serverIp, serverPort);
         Map<String, Object> payload = Map.of(
                 "apikey", apikey,
                 "prompt", prompt,
@@ -32,34 +34,27 @@ public class ApiMyLlama {
                 "images", images,
                 "raw", raw
         );
+        String payloadJson = objectMapper.writeValueAsString(payload);
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(new URI(url))
-                .POST(BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
+                .uri(URI.create(url))
                 .header("Content-Type", "application/json")
+                .POST(BodyPublishers.ofString(payloadJson))
                 .build();
 
-        HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
-        if (response.statusCode() != 200) {
-            throw new Exception("Request failed with status code: " + response.statusCode());
-        }
-
-        return objectMapper.readValue(response.body(), Map.class);
+        HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
+        return response.body();
     }
 
-    public Map<String, Object> getHealth(String apikey) throws Exception {
-        String url = String.format("http://%s:%d/health?apikey=%s", ip, port, apikey);
+    public String getHealth(String apikey) throws IOException, InterruptedException {
+        String url = String.format("http://%s:%d/health?apikey=%s", serverIp, serverPort, apikey);
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(new URI(url))
+                .uri(URI.create(url))
                 .GET()
                 .build();
 
-        HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
-        if (response.statusCode() != 200) {
-            throw new Exception("Request failed with status code: " + response.statusCode());
-        }
-
-        return objectMapper.readValue(response.body(), Map.class);
+        HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
+        return response.body();
     }
 }
