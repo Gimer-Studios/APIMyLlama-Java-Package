@@ -6,6 +6,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
 import java.util.Map;
 
 public class ApiMyLlama {
@@ -21,24 +22,18 @@ public class ApiMyLlama {
         this.objectMapper = new ObjectMapper();
     }
 
-    public String generate(String apiKey, String prompt, String model, boolean stream, Map<String, String> images, boolean raw) throws IOException, InterruptedException {
+    public String generate(String apiKey, String prompt, String model, boolean stream) throws IOException, InterruptedException {
         String url = String.format("http://%s:%d/generate", ip, port);
-        Map<String, Object> payload = Map.of(
-                "apikey", apiKey,
-                "prompt", prompt,
-                "model", model,
-                "stream", stream,
-                "images", images,
-                "raw", raw
-        );
-
-        String payloadJson = objectMapper.writeValueAsString(payload);
-        System.out.println("Payload: " + payloadJson);  // Print payload for debugging
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("apikey", apiKey);
+        payload.put("prompt", prompt);
+        payload.put("model", model);
+        payload.put("stream", stream);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(payloadJson))
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
