@@ -6,55 +6,52 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Map;
 
 public class ApiMyLlama {
-
-    private final String serverIp;
-    private final int serverPort;
-    private final ObjectMapper objectMapper;
+    private final String ip;
+    private final int port;
     private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
 
-    public ApiMyLlama(String serverIp, int serverPort) {
-        this.serverIp = serverIp;
-        this.serverPort = serverPort;
-        this.objectMapper = new ObjectMapper();
+    public ApiMyLlama(String ip, int port) {
+        this.ip = ip;
+        this.port = port;
         this.httpClient = HttpClient.newHttpClient();
+        this.objectMapper = new ObjectMapper();
     }
 
-    public String generate(String apikey, String prompt, String model, boolean stream, Map<String, String> images, boolean raw) throws IOException, InterruptedException {
-        String url = String.format("http://%s:%d/generate", serverIp, serverPort);
+    public String generate(String apiKey, String prompt, String model, boolean stream, Map<String, String> images, boolean raw) throws IOException, InterruptedException {
+        String url = String.format("http://%s:%d/generate", ip, port);
         Map<String, Object> payload = Map.of(
-                "apikey", apikey,
+                "apikey", apiKey,
                 "prompt", prompt,
                 "model", model,
                 "stream", stream,
                 "images", images,
                 "raw", raw
         );
-        String payloadJson = objectMapper.writeValueAsString(payload);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
-                .POST(BodyPublishers.ofString(payloadJson))
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         return response.body();
     }
 
-    public String getHealth(String apikey) throws IOException, InterruptedException {
-        String url = String.format("http://%s:%d/health?apikey=%s", serverIp, serverPort, apikey);
+    public Map<String, Object> getHealth(String apiKey) throws IOException, InterruptedException {
+        String url = String.format("http://%s:%d/health?apikey=%s", ip, port, apiKey);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
+                .header("Content-Type", "application/json")
                 .GET()
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
-        return response.body();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return objectMapper.readValue(response.body(), Map.class);
     }
 }
