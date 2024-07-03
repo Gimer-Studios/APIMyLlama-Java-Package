@@ -32,13 +32,19 @@ public class ApiMyLlama {
                 "raw", raw
         );
 
+        String payloadJson = objectMapper.writeValueAsString(payload);
+        System.out.println("Payload: " + payloadJson);  // Print payload for debugging
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
+                .POST(HttpRequest.BodyPublishers.ofString(payloadJson))
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            System.out.println("Error: " + response.statusCode() + " - " + response.body());
+        }
         return response.body();
     }
 
